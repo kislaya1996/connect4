@@ -3,9 +3,9 @@ import './App.css';
 import Peer from 'peerjs';
 import { useEffect, useState } from 'react';
 import { Box } from '@mui/material';
-import { Button, Typography, Grid, Container, IconButton } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { Button, Typography, Grid, Container } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import { CompareSharp } from '@mui/icons-material';
 
 function App() {
   const [peer, setPeer] = useState(new Peer())
@@ -17,6 +17,9 @@ function App() {
   const [board, setBoard] = useState([
    ['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','','']
   ])
+  const [result, setResult] = useState(null)
+  const [resultMessage, setResultMessage] = useState('')
+  
 
   function initializePeer(){
     peer.on('open',function(id){
@@ -45,18 +48,36 @@ function App() {
     {
       return
     }
-    console.log("open game board")
+    console.log("open game board", opponentId)
     setOpenGameBoard(true)
   },[opponentId])
 
+  useEffect(()=>{
+    console.log(result)
+    if(result===null){
+      return
+    }
+    if(result === peerId)
+    {
+      setResultMessage('YOU WON, refresh and reconnect to play again')
+      return
+    }
+    setResultMessage("OPPONENT WON, refresh and reconnect to play again")
+  },[result])
 
   function begin(){
     console.log('begins')
     conn.on('open', function(){
       conn.send({'id':peerId})
       conn.on('data', function(data){
-        console.log(data)
+        if(data.hasOwnProperty('move')&&data.hasOwnProperty('id')){
+          setTurn(true)
+          console.log(data['move'], data['id'])
+          updateGridWithMove(data['move'],data['id'])
+          return 
+        }
         if(data.hasOwnProperty('id')){
+          console.log(data['id'])
           setOpponentId(data['id'])
         }
       })
@@ -82,8 +103,120 @@ function App() {
     setTurn(false)
   }
 
-  function sendData(){
-    conn.send({'random': peerId})
+  function makeMove(event, index){
+    if(!turn)
+    {
+      return;
+    }
+    conn.send({'move':index, 'id':peerId})
+    updateGridWithMove(index, peerId)
+    setTurn(false)
+  }
+
+
+  function updateGridWithMove(index, id){
+    
+    const col = index
+    let newBoard = [...board]
+    for (let i = 5; i >= 0; i--) {
+      if(newBoard[i][col]==='')
+      {
+        newBoard[i][col]=id;
+        setBoard(newBoard)
+        console.log(newBoard)
+        if(checkWin(newBoard, i,col, id)){
+          console.log(id)
+          setResult(id)
+        }
+        return;
+      }
+    }
+    return;
+  }
+
+  function checkWin(gameBoard, r, c, id){
+    const c_min = 0, c_max = 9
+    var  count=0
+    for (let i = 0; i <=5; i++) {
+      if(gameBoard[i][c]===id)
+      {
+        count++;
+        if(count===4)
+        {
+          return true;
+        }
+      } else {
+        count=0
+      }
+      
+    }
+    count = 0 
+    for (let i = 0; i <=9; i++) {
+      if(gameBoard[r][i]===id)
+      {
+        count++;
+        if(count===4)
+        {
+          return true;
+        }
+      } else {
+        count=0
+      }
+      
+    }
+    count = 0
+    const diff = r-c
+    for (let i = 0; i <=5 ; i++) {
+      var j = i-diff
+      if(j<c_min || j>c_max)
+      {
+        continue;
+      }
+      if(gameBoard[i][j]===id)
+      {
+        count++;
+        if(count===4)
+        {
+          return true
+        }
+      }
+      else{
+        count=0;
+      }
+    }
+
+    count =0
+    const sum = r+c
+    for (let i = 0; i <=5 ; i++) {
+       j = sum-i
+      if(j<c_min || j>c_max)
+      {
+        continue;
+      }
+      if(gameBoard[i][j]===id)
+      {
+        count++;
+        if(count===4)
+        {
+          return true
+        }
+      }
+      else{
+        count=0;
+      }
+    }
+    return false;
+  }
+
+  function displayValue(i,j){
+    if(board[i][j]===peerId)
+    {
+      return 'X'
+    } if(board[i][j]==opponentId)
+    {
+      return 'O'
+    }
+    return ''
   }
 
 
@@ -92,7 +225,7 @@ function App() {
     <div className="App">
       {!openGameBoard && <header className="App-header">
         <Box sx={{
-          py:6
+          py:5
         }}>
          <Typography variant="h1" component="div" gutterBottom>
           TIC-STACK-TOE
@@ -130,12 +263,12 @@ function App() {
                 <Grid container  key={i} sx={{width:'100%'}}>
                 {
                   [...Array(10).keys()].map((item, j) => (
-                    <Grid item >
+                    <Grid item key={j} >
                     <Box className="grid-item" key={j} sx={{
                       height:'30px',
                       width:'40px'
                     }}>
-                        {board[i][j]}
+                        {displayValue(i,j)}
                     </Box>
                     </Grid>
                 )) 
@@ -147,22 +280,22 @@ function App() {
             {
             
             [...Array(10).keys()].map((item, j) => (
-              <Grid item >
+              <Grid item key={j}>
               <Box  key={j} sx={{
                       fontSize:'30px',
                       padding:'9px',
                       textAlign:'center'
                     }} >
-                      <Button variant='contained' color="primary">
+                      <Button variant='contained' color="primary" onClick={(event)=>{makeMove(event,j)}}>
 
-                 <ArrowUpwardIcon/>
+                          <ArrowUpwardIcon/>
                       </Button>
               </Box>
               </Grid>
               
           ))}
           </Grid>
-          
+          {resultMessage}
           </Box>
       </Container>
 

@@ -243,6 +243,9 @@ function App() {
          <Typography variant="h1" component="div" gutterBottom>
           TIC-STACK-TOE
          </Typography>
+         <Typography variant="caption" component="div" gutterBottom>
+          v0.0.2
+         </Typography>
         </Box>
        <Box sx={{
          display:"flex",

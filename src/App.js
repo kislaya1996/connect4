@@ -2,10 +2,11 @@
 import './App.css';
 import Peer from 'peerjs';
 import { useEffect, useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, IconButton } from '@mui/material';
 import { Button, Typography, Grid, Container } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import { CompareSharp } from '@mui/icons-material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 function App() {
   const [peer, setPeer] = useState(new Peer())
@@ -21,7 +22,9 @@ function App() {
   const [resultMessage, setResultMessage] = useState('')
   const [recentRow, setRecentRow] = useState(-1)
   const [recentCol, setRecentCol] = useState(-1)
-  
+  const [showRoomId, setShowRoomId] = useState(false)
+  const [showRematchOption, setShowRematchOption] = useState(false)
+  const [showRematchAcceptance, setShowRematchAcceptance] = useState(false)
 
   function initializePeer(){
     peer.on('open',function(id){
@@ -61,10 +64,10 @@ function App() {
     }
     if(result === peerId)
     {
-      setResultMessage('YOU WON, refresh and reconnect to play again')
+      setResultMessage('YOU WON')
       return
     }
-    setResultMessage("OPPONENT WON, refresh and reconnect to play again")
+    setResultMessage("OPPONENT WON")
   },[result])
 
   function begin(){
@@ -72,6 +75,24 @@ function App() {
     conn.on('open', function(){
       conn.send({'id':peerId})
       conn.on('data', function(data){
+        if(data==="rematch")
+        {
+          setShowRematchAcceptance(true)
+          return
+        }
+        if(data==="rematch-accept")
+        {
+          setTurn(true)
+          conn.send('rematch-accepted')
+          resetEverything()
+          return 
+        }
+        if(data==="rematch-accepted")
+        {
+          setTurn(false)
+          resetEverything()
+          return 
+        }
         if(data.hasOwnProperty('move')&&data.hasOwnProperty('id')){
           setTurn(true)
           console.log(data['move'], data['id'])
@@ -91,7 +112,8 @@ function App() {
   
 
   function startGame(){
-    alert("Game Id:  "+peerId)
+    // alert("Game Id:  "+peerId)
+    setShowRoomId(true)
     peer.on('connection', function(conn) { 
     setConn(conn)
     });
@@ -131,6 +153,7 @@ function App() {
         if(checkWin(newBoard, i,col, id)){
           console.log(id)
           setResult(id)
+          setShowRematchOption(true)
         }
         return;
       }
@@ -232,6 +255,31 @@ function App() {
     }
   }
 
+  function requestRematch(){
+    conn.send('rematch')
+  }
+
+  function acceptRematchRequest(){
+    conn.send('rematch-accept')
+    // resetEverything()
+  }
+
+  function rejectRematchRequest(){
+    //
+  }
+
+  function resetEverything(){
+    setBoard([
+      ['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','','']
+     ])
+     setResult(null)
+     setResultMessage('')
+     setRecentRow(-1)
+     setRecentCol(-1)
+     setShowRematchOption(false)
+     setShowRematchAcceptance(false)
+  }
+
 
 
   return (
@@ -258,6 +306,7 @@ function App() {
         <Button variant='contained' onClick={startGame}>
           Start Game
         </Button>
+        
          </Box>
         <Box sx={{
           px:2
@@ -269,6 +318,19 @@ function App() {
 
         </Box>
        </Box>
+      {showRoomId &&  <Box sx={{
+         display:"flex",
+         justifyContent:"space-around",
+         pt:10
+       }}>
+
+        <Typography variant="subtitle1" component="div" gutterBottom sx={{pr:5, pt:2}}>
+          {`Room Id: ${peerId}`}
+         </Typography>
+         <IconButton color='primary' size="medium" onClick={() => {navigator.clipboard.writeText(peerId)}}>
+          <ContentCopyIcon fontSize="inherit" />
+          </IconButton>
+        </Box>}
       </header>}
 
       {openGameBoard && 
@@ -293,9 +355,9 @@ function App() {
                 </Grid>
               ))
             }
+              {`-------Click buttons below to make move------`}
             <Grid container   sx={{width:'100%', }}>
             {
-            
             [...Array(10).keys()].map((item, j) => (
               <Grid item key={j}>
               <Box  key={j} sx={{
@@ -313,6 +375,25 @@ function App() {
           ))}
           </Grid>
           {resultMessage}
+          {
+            showRematchOption &&
+            
+            <Button variant="contained" onClick={()=>{requestRematch()}}>
+          Rematch?
+        </Button>
+          }
+          {
+            showRematchAcceptance && 
+            <Box>
+              {`Opponent Requested Rematch`}
+            <Button variant="contained" onClick={()=>{acceptRematchRequest()}}>
+         Accept
+       </Button>
+       <Button variant="contained" onClick={()=>{rejectRematchRequest()}}>
+         Reject
+       </Button>
+            </Box>
+        }
           </Box>
       </Container>
 

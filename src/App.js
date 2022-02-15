@@ -19,6 +19,8 @@ function App() {
   ])
   const [result, setResult] = useState(null)
   const [resultMessage, setResultMessage] = useState('')
+  const [recentRow, setRecentRow] = useState(-1)
+  const [recentCol, setRecentCol] = useState(-1)
   
 
   function initializePeer(){
@@ -122,6 +124,8 @@ function App() {
       if(newBoard[i][col]==='')
       {
         newBoard[i][col]=id;
+        setRecentRow(i)
+        setRecentCol(col)
         setBoard(newBoard)
         console.log(newBoard)
         if(checkWin(newBoard, i,col, id)){
@@ -219,6 +223,15 @@ function App() {
     return ''
   }
 
+  function displayMove(){
+    if(turn)
+    {
+      return "Your move:"
+    } else {
+      return "Waiting for opponent to move:"
+    }
+  }
+
 
 
   return (
@@ -258,13 +271,14 @@ function App() {
       {openGameBoard && 
       <Container >
           <Box sx={{ width: '100%', pl:10, pt:10 }}>
+            {displayMove()}
             {
               [...Array(6).keys()].map((item, i) => (
                 <Grid container  key={i} sx={{width:'100%'}}>
                 {
                   [...Array(10).keys()].map((item, j) => (
                     <Grid item key={j} >
-                    <Box className="grid-item" key={j} sx={{
+                    <Box className="grid-item" style={{color: recentRow === i && recentCol ===j ? "red" : ""}} key={j} sx={{
                       height:'30px',
                       width:'40px'
                     }}>

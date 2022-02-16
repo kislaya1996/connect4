@@ -75,6 +75,7 @@ function App() {
     conn.on('open', function(){
       conn.send({'id':peerId})
       conn.on('data', function(data){
+        console.log(data)
         if(data==="rematch")
         {
           setShowRematchAcceptance(true)
@@ -82,25 +83,18 @@ function App() {
         }
         if(data==="rematch-accept")
         {
-          setTurn(true)
-          conn.send('rematch-accepted')
-          resetEverything()
-          return 
-        }
-        if(data==="rematch-accepted")
-        {
           setTurn(false)
           resetEverything()
           return 
         }
+      
         if(data.hasOwnProperty('move')&&data.hasOwnProperty('id')){
+          
           setTurn(true)
-          console.log(data['move'], data['id'])
           updateGridWithMove(data['move'],data['id'])
           return 
         }
         if(data.hasOwnProperty('id')){
-          console.log(data['id'])
           setOpponentId(data['id'])
         }
       })
@@ -139,18 +133,17 @@ function App() {
 
 
   function updateGridWithMove(index, id){
-    
+    // console.log(board,"kjgjk")
     const col = index
-    let newBoard = [...board]
     for (let i = 5; i >= 0; i--) {
-      if(newBoard[i][col]==='')
+      if(board[i][col]==='')
       {
-        newBoard[i][col]=id;
+        board[i][col]=id;
         setRecentRow(i)
         setRecentCol(col)
-        setBoard(newBoard)
-        console.log(newBoard)
-        if(checkWin(newBoard, i,col, id)){
+        setBoard(board)
+        // console.log(board)
+        if(checkWin(board, i,col, id)){
           console.log(id)
           setResult(id)
           setShowRematchOption(true)
@@ -261,7 +254,8 @@ function App() {
 
   function acceptRematchRequest(){
     conn.send('rematch-accept')
-    // resetEverything()
+    setTurn(true)
+    resetEverything()
   }
 
   function rejectRematchRequest(){
@@ -269,16 +263,23 @@ function App() {
   }
 
   function resetEverything(){
-    setBoard([
+    console.log('reset called')
+    const newBoard = [
       ['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','',''],['','','','','','','','','','']
-     ])
+     ]
+    setBoard([...newBoard])
      setResult(null)
      setResultMessage('')
      setRecentRow(-1)
      setRecentCol(-1)
      setShowRematchOption(false)
      setShowRematchAcceptance(false)
+     begin()
   }
+
+  useEffect(()=>{
+    console.log(board)
+  },[board])
 
 
 
